@@ -13,7 +13,7 @@ const cfImage = (url, opts = {}) => {
 };
 
 const defaults = {
-    prompt: 'embedding:lazypost, adult, solo, face',
+    prompt: 'embedding:lazypost, ',
     negative: 'embedding:lazyneg, drawing, sketch, text, kid, loli, greyscale, simple, horror, monster',
     steps: 20,
     cfg: 4,
@@ -344,8 +344,8 @@ export default function ComfyUIPage() {
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
-                        <div>
+                    <div className="lightbox-inner">
+                        <div onClick={(e) => e.stopPropagation()}>
                             <Image
                                 src={cfImage(images[activeIndex], { quality: 80 })}
                                 alt="Full view"
@@ -354,32 +354,32 @@ export default function ComfyUIPage() {
                                 priority
                                 unoptimized
                             />
-                            <button className="lightbox-close" onClick={closeLightbox}>
-                                ×
+                        </div>
+                        <button className="lightbox-close" onClick={closeLightbox}>
+                            ×
+                        </button>
+
+                        {/* Navigation arrows */}
+                        {activeIndex > 0 && (
+                            <button
+                                className="lightbox-nav lightbox-prev"
+                                onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                            >
+                                ‹
                             </button>
+                        )}
+                        {activeIndex < images.length - 1 && (
+                            <button
+                                className="lightbox-nav lightbox-next"
+                                onClick={(e) => { e.stopPropagation(); goNext(); }}
+                            >
+                                ›
+                            </button>
+                        )}
 
-                            {/* Navigation arrows */}
-                            {activeIndex > 0 && (
-                                <button
-                                    className="lightbox-nav lightbox-prev"
-                                    onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                                >
-                                    ‹
-                                </button>
-                            )}
-                            {activeIndex < images.length - 1 && (
-                                <button
-                                    className="lightbox-nav lightbox-next"
-                                    onClick={(e) => { e.stopPropagation(); goNext(); }}
-                                >
-                                    ›
-                                </button>
-                            )}
-
-                            {/* Counter */}
-                            <div className="lightbox-counter">
-                                {activeIndex + 1} / {images.length}
-                            </div>
+                        {/* Counter */}
+                        <div className="lightbox-counter">
+                            {activeIndex + 1} / {images.length}
                         </div>
                     </div>
                 </div>

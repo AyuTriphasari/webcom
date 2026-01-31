@@ -24,7 +24,7 @@ export default function RootLayout({ children }) {
                                 🖥️ ComfyUI
                             </Link>
                             <Link href="/gallery" className="nav-link">
-                                🖼️ Gallery
+                                🖼️ Public Feed
                             </Link>
                         </div>
                     </div>

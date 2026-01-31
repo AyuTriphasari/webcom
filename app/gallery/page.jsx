@@ -150,8 +150,8 @@ export default function Gallery() {
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
-                        <div>
+                    <div className="lightbox-inner">
+                        <div onClick={(e) => e.stopPropagation()}>
                             <Image
                                 src={cfImage(active.file, { quality: 80 })}
                                 alt="Full view"
@@ -160,50 +160,50 @@ export default function Gallery() {
                                 priority
                                 unoptimized={active.file?.startsWith('/api/')}
                             />
+                        </div>
 
-                            {/* Close button */}
-                            <button className="lightbox-close" onClick={closeLightbox}>
-                                ×
-                            </button>
+                        {/* Close button */}
+                        <button className="lightbox-close" onClick={closeLightbox}>
+                            ×
+                        </button>
 
-                            {/* Info icon - shows prompt */}
-                            <button
-                                className="lightbox-info"
-                                onClick={() => setShowPrompt(!showPrompt)}
-                                title="Show prompt"
-                            >
-                                ℹ
-                            </button>
+                        {/* Info icon - shows prompt */}
+                        <button
+                            className="lightbox-info"
+                            onClick={(e) => { e.stopPropagation(); setShowPrompt(!showPrompt); }}
+                            title="Show prompt"
+                        >
+                            ℹ
+                        </button>
 
-                            {/* Prompt overlay */}
-                            {showPrompt && (
-                                <div className="lightbox-prompt">
-                                    {active.prompt}
-                                </div>
-                            )}
-
-                            {/* Navigation arrows */}
-                            {activeIndex > 0 && (
-                                <button
-                                    className="lightbox-nav lightbox-prev"
-                                    onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                                >
-                                    ‹
-                                </button>
-                            )}
-                            {activeIndex < items.length - 1 && (
-                                <button
-                                    className="lightbox-nav lightbox-next"
-                                    onClick={(e) => { e.stopPropagation(); goNext(); }}
-                                >
-                                    ›
-                                </button>
-                            )}
-
-                            {/* Counter */}
-                            <div className="lightbox-counter">
-                                {activeIndex + 1} / {items.length}
+                        {/* Prompt overlay */}
+                        {showPrompt && (
+                            <div className="lightbox-prompt" onClick={(e) => e.stopPropagation()}>
+                                {active.prompt}
                             </div>
+                        )}
+
+                        {/* Navigation arrows */}
+                        {activeIndex > 0 && (
+                            <button
+                                className="lightbox-nav lightbox-prev"
+                                onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                            >
+                                ‹
+                            </button>
+                        )}
+                        {activeIndex < items.length - 1 && (
+                            <button
+                                className="lightbox-nav lightbox-next"
+                                onClick={(e) => { e.stopPropagation(); goNext(); }}
+                            >
+                                ›
+                            </button>
+                        )}
+
+                        {/* Counter */}
+                        <div className="lightbox-counter">
+                            {activeIndex + 1} / {items.length}
                         </div>
                     </div>
                 </div>

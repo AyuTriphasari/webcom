@@ -11,8 +11,8 @@ const cfImage = (url, opts = {}) => {
 };
 
 const defaults = {
-    prompt: 'adult, solo, face, embedding:Lazy_Embeddings/Positive/lazypos, embedding:Lazy_Embeddings/lazynsfw, embedding:Lazy_Embeddings/Positive/lazympos',
-    negative: 'no_face, close up, greyscale, black_white, simple_background, censored, logo, blur, small ass, young woman, loli, small breast, no_nipple, embedding:Lazy_Embeddings/Negative/lazyneg, low quality, blurry, artifacts, watermark, text, logo',
+    prompt: 'embedding:Lazy_Embeddings/Positive/lazypos, embedding:Lazy_Embeddings/lazynsfw, embedding:Lazy_Embeddings/Positive/lazympos',
+    negative: 'greyscale, black_white, simple_background, censored, logo, blur, kid, young woman, loli, embedding:Lazy_Embeddings/Negative/lazyneg, low quality, blurry, artifacts, watermark, text, logo',
     steps: 25,
     cfg: 4,
     width: 1024,
@@ -306,8 +306,8 @@ export default function Home() {
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
-                        <div>
+                    <div className="lightbox-inner">
+                        <div onClick={(e) => e.stopPropagation()}>
                             <Image
                                 src={cfImage(images[activeIndex], { quality: 80 })}
                                 alt="Full view"
@@ -315,36 +315,43 @@ export default function Home() {
                                 sizes="100vw"
                                 priority
                             />
-                            <button className="lightbox-close" onClick={closeLightbox}>
-                                ×
+                        </div>
+                        <button className="lightbox-close" onClick={closeLightbox}>
+                            ×
+                        </button>
+
+                        {/* Navigation arrows */}
+                        {activeIndex > 0 && (
+                            <button
+                                className="lightbox-nav lightbox-prev"
+                                onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                            >
+                                ‹
                             </button>
+                        )}
+                        {activeIndex < images.length - 1 && (
+                            <button
+                                className="lightbox-nav lightbox-next"
+                                onClick={(e) => { e.stopPropagation(); goNext(); }}
+                            >
+                                ›
+                            </button>
+                        )}
 
-                            {/* Navigation arrows */}
-                            {activeIndex > 0 && (
-                                <button
-                                    className="lightbox-nav lightbox-prev"
-                                    onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                                >
-                                    ‹
-                                </button>
-                            )}
-                            {activeIndex < images.length - 1 && (
-                                <button
-                                    className="lightbox-nav lightbox-next"
-                                    onClick={(e) => { e.stopPropagation(); goNext(); }}
-                                >
-                                    ›
-                                </button>
-                            )}
-
-                            {/* Counter */}
-                            <div className="lightbox-counter">
-                                {activeIndex + 1} / {images.length}
-                            </div>
+                        {/* Counter */}
+                        <div className="lightbox-counter">
+                            {activeIndex + 1} / {images.length}
                         </div>
                     </div>
                 </div>
             )}
+
+            <footer className="powered-by">
+                Powered by{' '}
+                <a href="https://www.runninghub.ai/?inviteCode=6cnkbyfd" target="_blank" rel="noopener noreferrer">
+                    RunningHub
+                </a>
+            </footer>
         </main>
     );
 }
