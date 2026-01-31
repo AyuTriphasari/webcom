@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const GALLERY_FILE = path.join(process.cwd(), '..', 'storage', 'gallery.json');
+const GALLERY_FILE = path.join(process.cwd(), 'storage', 'gallery.json');
 
 const readGallery = () => {
     try {
