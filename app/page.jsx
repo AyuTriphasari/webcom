@@ -193,6 +193,7 @@ export default function Home() {
                                     value={form.prompt}
                                     onChange={onChange('prompt')}
                                     placeholder="Describe your image..."
+                                    spellCheck={false}
                                     required
                                 />
                             </div>
@@ -203,6 +204,7 @@ export default function Home() {
                                     value={form.negative}
                                     onChange={onChange('negative')}
                                     placeholder="What to avoid..."
+                                    spellCheck={false}
                                 />
                             </div>
                         </div>
