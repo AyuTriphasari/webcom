@@ -31,6 +31,60 @@ export default function Home() {
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [errors, setErrors] = useState({});
     const [touchStart, setTouchStart] = useState(null);
+    const [models, setModels] = useState([]);
+    const [loadingModels, setLoadingModels] = useState(true);
+    const [showModelPicker, setShowModelPicker] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasMoreModels, setHasMoreModels] = useState(true);
+    const [loadingMoreModels, setLoadingMoreModels] = useState(false);
+
+    // Fetch models from RunningHub API
+    const fetchModels = async (page = 1, append = false) => {
+        if (!append) setLoadingModels(true);
+        else setLoadingMoreModels(true);
+
+        try {
+            const response = await fetch('https://www.runninghub.ai/api/resource/list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    size: 30,
+                    current: page,
+                    tags: null,
+                    resourceType: "CHECKPOINT",
+                    baseModels: ["IL-XL", "NoobAI-XL", "Pony-XL"],
+                    resourceName: "",
+                    systemResource: true,
+                    choiceModel: true,
+                    point: ""
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.code === 0 && result.data?.records) {
+                    if (append) {
+                        setModels(prev => [...prev, ...result.data.records]);
+                    } else {
+                        setModels(result.data.records);
+                    }
+
+                    // Check if there are more pages
+                    const totalPages = Math.ceil(result.data.total / 30);
+                    setHasMoreModels(page < totalPages);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch models:', error);
+        } finally {
+            setLoadingModels(false);
+            setLoadingMoreModels(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchModels(1, false);
+    }, []);
 
     const openLightbox = (idx) => setActiveIndex(idx);
     const closeLightbox = () => setActiveIndex(null);
@@ -245,7 +299,188 @@ export default function Home() {
 
                                 <div>
                                     <label>Model</label>
-                                    <input value={form.model} onChange={onChange('model')} />
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <input
+                                            value={form.model}
+                                            onChange={onChange('model')}
+                                            style={{ flex: 1 }}
+                                            readOnly
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowModelPicker(!showModelPicker)}
+                                            style={{
+                                                padding: '8px 16px',
+                                                backgroundColor: showModelPicker ? '#0070f3' : '#333',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                fontSize: '14px',
+                                                fontWeight: '500',
+                                                transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            {showModelPicker ? 'Hide' : 'Browse'} Models
+                                        </button>
+                                    </div>
+
+                                    {showModelPicker && (
+                                        <div style={{ marginTop: '12px' }}>
+                                            {loadingModels ? (
+                                                <div style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
+                                                    Loading models...
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div
+                                                        id="model-grid-container"
+                                                        style={{
+                                                            display: 'grid',
+                                                            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                                                            gap: '10px',
+                                                            maxHeight: '400px',
+                                                            overflowY: 'auto',
+                                                            padding: '8px',
+                                                            backgroundColor: '#0a0a0a',
+                                                            borderRadius: '8px',
+                                                            border: '1px solid #333',
+                                                        }}
+                                                        onScroll={(e) => {
+                                                            const container = e.currentTarget;
+                                                            const scrollTop = container.scrollTop;
+                                                            const scrollHeight = container.scrollHeight;
+                                                            const clientHeight = container.clientHeight;
+
+                                                            // Check if scrolled near bottom (within 100px)
+                                                            if (scrollHeight - scrollTop - clientHeight < 100 && hasMoreModels && !loadingMoreModels) {
+                                                                const nextPage = currentPage + 1;
+                                                                setCurrentPage(nextPage);
+                                                                fetchModels(nextPage, true);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {models.map((model) => {
+                                                            const fullPath = model.versions?.[0]?.resourceStorageName || model.resourceName;
+                                                            const modelFile = fullPath.split('/').pop();
+                                                            const isSelected = form.model === modelFile;
+                                                            const thumbnailUrl = model.posterUrl;
+
+                                                            return (
+                                                                <button
+                                                                    key={model.id}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setForm(f => ({ ...f, model: modelFile }));
+                                                                        setShowModelPicker(false);
+                                                                    }}
+                                                                    style={{
+                                                                        position: 'relative',
+                                                                        border: isSelected ? '3px solid #0070f3' : '2px solid #333',
+                                                                        borderRadius: '8px',
+                                                                        overflow: 'hidden',
+                                                                        cursor: 'pointer',
+                                                                        backgroundColor: '#1a1a1a',
+                                                                        padding: 0,
+                                                                        transition: 'all 0.2s',
+                                                                        aspectRatio: '3/4',
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (!isSelected) e.currentTarget.style.borderColor = '#555';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        if (!isSelected) e.currentTarget.style.borderColor = '#333';
+                                                                    }}
+                                                                >
+                                                                    {thumbnailUrl && (
+                                                                        <Image
+                                                                            src={cfImage(thumbnailUrl, { quality: 30 })}
+                                                                            alt={model.resourceName}
+                                                                            fill
+                                                                            sizes="160px"
+                                                                            style={{ objectFit: 'cover' }}
+                                                                        />
+                                                                    )}
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        top: 0,
+                                                                        left: 0,
+                                                                        right: 0,
+                                                                        padding: '4px 6px',
+                                                                        background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
+                                                                    }}>
+                                                                        <div style={{
+                                                                            fontSize: '9px',
+                                                                            fontWeight: '600',
+                                                                            color: 'white',
+                                                                            backgroundColor: model.versions?.[0]?.baseModel === 'IL-XL' ? '#8b5cf6' : '#ec4899',
+                                                                            padding: '2px 4px',
+                                                                            borderRadius: '3px',
+                                                                            display: 'inline-block',
+                                                                        }}>
+                                                                            {model.versions?.[0]?.baseModel || 'N/A'}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        bottom: 0,
+                                                                        left: 0,
+                                                                        right: 0,
+                                                                        padding: '6px',
+                                                                        background: 'linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%)',
+                                                                    }}>
+                                                                        <div style={{
+                                                                            fontSize: '10px',
+                                                                            fontWeight: '500',
+                                                                            color: 'white',
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            display: '-webkit-box',
+                                                                            WebkitLineClamp: 2,
+                                                                            WebkitBoxOrient: 'vertical',
+                                                                            lineHeight: '1.2',
+                                                                            textAlign: 'left',
+                                                                        }}>
+                                                                            {model.resourceName}
+                                                                        </div>
+                                                                    </div>
+                                                                    {isSelected && (
+                                                                        <div style={{
+                                                                            position: 'absolute',
+                                                                            top: '6px',
+                                                                            right: '6px',
+                                                                            width: '20px',
+                                                                            height: '20px',
+                                                                            borderRadius: '50%',
+                                                                            backgroundColor: '#0070f3',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            fontSize: '12px',
+                                                                            color: 'white',
+                                                                            fontWeight: 'bold',
+                                                                        }}>
+                                                                            ✓
+                                                                        </div>
+                                                                    )}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    {loadingMoreModels && (
+                                                        <div style={{ padding: '12px', textAlign: 'center', color: '#888', fontSize: '12px' }}>
+                                                            Loading more models...
+                                                        </div>
+                                                    )}
+                                                    {!hasMoreModels && models.length > 0 && (
+                                                        <div style={{ padding: '12px', textAlign: 'center', color: '#666', fontSize: '12px' }}>
+                                                            No more models to load
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
