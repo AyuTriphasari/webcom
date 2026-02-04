@@ -448,6 +448,29 @@ export default function VideoPage() {
                 </div>
             )}
 
+            {/* Credits Notice */}
+            <div style={{
+                textAlign: 'center',
+                padding: '16px 20px',
+                marginTop: '24px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+            }}>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', margin: 0 }}>
+                    💡 Generation failed? My credits might be empty!{' '}
+                    <a
+                        href="https://www.runninghub.ai/?inviteCode=6cnkbyfd"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#f43f5e', textDecoration: 'none', fontWeight: 500 }}
+                    >
+                        Sign up with my referral
+                    </a>
+                    {' '}to help refill credits & get your own free generations! 🎁
+                </p>
+            </div>
+
             <footer className="powered-by">
                 Powered by{' '}
                 <a href="https://www.runninghub.ai/?inviteCode=6cnkbyfd" target="_blank" rel="noopener noreferrer">
