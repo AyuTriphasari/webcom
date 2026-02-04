@@ -1,5 +1,6 @@
 import './globals.css';
 import Link from 'next/link';
+import ChatBotWrapper from './components/ChatBotWrapper';
 
 export const metadata = {
     title: 'Running Hub Image Generator',
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
                     </div>
                 </nav>
                 {children}
+                <ChatBotWrapper />
             </body>
         </html>
     );
