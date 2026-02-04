@@ -22,8 +22,6 @@ Usage Guide:
 Tips for good prompts:
 - Use detailed descriptions of the subject, pose, expression, clothing
 - Specify art styles like "anime style", "realistic", "digital art"
-- Mention lighting conditions: "cinematic lighting", "soft lighting"
-- Include quality tags: "masterpiece", "best quality", "highly detailed"
 - Describe the background setting 
 - Use negative prompts to avoid unwanted elements
 
