@@ -19,7 +19,7 @@ export default function VideoPage() {
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [errors, setErrors] = useState({});
     const [progress, setProgress] = useState(0);
-    const [enhanceEnabled, setEnhanceEnabled] = useState(true);
+    const [enhanceEnabled, setEnhanceEnabled] = useState(false);
     const [enhancing, setEnhancing] = useState(false);
     const [currentTaskId, setCurrentTaskId] = useState(null);
 

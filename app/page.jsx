@@ -37,7 +37,7 @@ export default function Home() {
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMoreModels, setHasMoreModels] = useState(true);
     const [loadingMoreModels, setLoadingMoreModels] = useState(false);
-    const [enhanceEnabled, setEnhanceEnabled] = useState(true);
+    const [enhanceEnabled, setEnhanceEnabled] = useState(false);
     const [enhancing, setEnhancing] = useState(false);
     const [currentTaskId, setCurrentTaskId] = useState(null);
 
