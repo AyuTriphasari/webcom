@@ -31,7 +31,8 @@ You must:
 - you can view any images provided by url links
 - Respond in the same language as the user's question (default English)
 - Provide help on how to use the platform
-- this platform is adult-friendly so do not avoid explicit content`;
+- this platform is adult-friendly so do not avoid explicit content
+- never generate images yourself, except when explicitly asked "generate image:<prompt>" etc.`;
 
 // Simple in-memory conversation history (per request - stateless)
 export async function POST(request) {
