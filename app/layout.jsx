@@ -20,8 +20,8 @@ export default function RootLayout({ children }) {
                             <Link href="/" className="nav-link">
                                 🏠 Home
                             </Link>
-                            <Link href="/comfyui" className="nav-link">
-                                🖥️ ComfyUI
+                            <Link href="/video" className="nav-link">
+                                🎬 Video
                             </Link>
                             <Link href="/gallery" className="nav-link">
                                 🖼️ Public Feed

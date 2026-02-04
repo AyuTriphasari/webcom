@@ -123,22 +123,66 @@ export default function Gallery() {
             ) : (
                 <div className="card">
                     <div className={getGridClass()}>
-                        {items.map((item, idx) => (
-                            <button
-                                key={idx}
-                                className="thumb"
-                                type="button"
-                                onClick={() => openLightbox(idx)}
-                            >
-                                <Image
-                                    src={cfImage(item.file, { quality: 80 })}
-                                    alt={`Image ${idx + 1}`}
-                                    fill
-                                    sizes="(max-width: 640px) 50vw, 33vw"
-                                    unoptimized={item.file?.startsWith('/api/')}
-                                />
-                            </button>
-                        ))}
+                        {items.map((item, idx) => {
+                            const isVideo = item.type === 'video' || item.file?.endsWith('.mp4');
+                            return (
+                                <button
+                                    key={idx}
+                                    className="thumb"
+                                    type="button"
+                                    onClick={() => openLightbox(idx)}
+                                    style={{ position: 'relative' }}
+                                >
+                                    {isVideo ? (
+                                        <>
+                                            <video
+                                                src={item.file}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                muted
+                                                preload="metadata"
+                                            />
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '50%',
+                                                left: '50%',
+                                                transform: 'translate(-50%, -50%)',
+                                                background: 'rgba(0,0,0,0.6)',
+                                                borderRadius: '50%',
+                                                width: '50px',
+                                                height: '50px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '24px',
+                                            }}>
+                                                ▶
+                                            </div>
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '8px',
+                                                left: '8px',
+                                                background: '#f43f5e',
+                                                color: 'white',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                fontSize: '10px',
+                                                fontWeight: '600',
+                                            }}>
+                                                VIDEO
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <Image
+                                            src={cfImage(item.file, { quality: 80 })}
+                                            alt={`Image ${idx + 1}`}
+                                            fill
+                                            sizes="(max-width: 640px) 50vw, 33vw"
+                                            unoptimized={item.file?.startsWith('/api/')}
+                                        />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -152,14 +196,28 @@ export default function Gallery() {
                 >
                     <div className="lightbox-inner">
                         <div onClick={(e) => e.stopPropagation()}>
-                            <Image
-                                src={cfImage(active.file, { quality: 80 })}
-                                alt="Full view"
-                                fill
-                                sizes="100vw"
-                                priority
-                                unoptimized={active.file?.startsWith('/api/')}
-                            />
+                            {(active.type === 'video' || active.file?.endsWith('.mp4')) ? (
+                                <video
+                                    src={active.file}
+                                    controls
+                                    autoPlay
+                                    loop
+                                    style={{
+                                        maxWidth: '90vw',
+                                        maxHeight: '90vh',
+                                        borderRadius: '8px',
+                                    }}
+                                />
+                            ) : (
+                                <Image
+                                    src={cfImage(active.file, { quality: 80 })}
+                                    alt="Full view"
+                                    fill
+                                    sizes="100vw"
+                                    priority
+                                    unoptimized={active.file?.startsWith('/api/')}
+                                />
+                            )}
                         </div>
 
                         {/* Close button */}

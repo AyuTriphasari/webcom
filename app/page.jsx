@@ -37,6 +37,9 @@ export default function Home() {
     const [currentPage, setCurrentPage] = useState(1);
     const [hasMoreModels, setHasMoreModels] = useState(true);
     const [loadingMoreModels, setLoadingMoreModels] = useState(false);
+    const [enhanceEnabled, setEnhanceEnabled] = useState(true);
+    const [enhancing, setEnhancing] = useState(false);
+    const [currentTaskId, setCurrentTaskId] = useState(null);
 
     // Fetch models from RunningHub API
     const fetchModels = async (page = 1, append = false) => {
@@ -139,6 +142,18 @@ export default function Home() {
         return Object.keys(newErrors).length === 0;
     };
 
+    // Enhance prompt using AI
+    const enhancePrompt = async (prompt) => {
+        const resp = await fetch('/api/enchance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, type: 'image' })
+        });
+        if (!resp.ok) throw new Error('Failed to enhance prompt');
+        const data = await resp.json();
+        return data.enhanced || prompt;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) {
@@ -147,24 +162,95 @@ export default function Home() {
         }
 
         setLoading(true);
-        setStatus('Generating...');
+        setCurrentTaskId(null);
         setImages(Array.from({ length: Number(form.batch) }, (_, i) => `loading-${i}`));
 
         try {
+            let promptToUse = form.prompt;
+
+            // Enhance prompt if enabled
+            if (enhanceEnabled) {
+                setStatus('✨ Enhancing prompt...');
+                setEnhancing(true);
+                try {
+                    promptToUse = await enhancePrompt(form.prompt);
+                    console.log('Enhanced prompt:', promptToUse);
+                } catch (err) {
+                    console.warn('Enhance failed, using original:', err.message);
+                }
+                setEnhancing(false);
+            }
+
+            setStatus('⏳ Generating...');
+
             const resp = await fetch('/api/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form)
+                body: JSON.stringify({ ...form, prompt: promptToUse })
             });
-            if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).message || 'Failed');
-            const data = await resp.json();
-            setImages(data.files || []);
-            setStatus('✓ Done');
+
+            if (!resp.ok) throw new Error('Failed to start generation');
+
+            // Handle streaming response
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = JSON.parse(line.slice(6));
+
+                        if (data.type === 'taskId') {
+                            setCurrentTaskId(data.taskId);
+                            console.log('Task ID:', data.taskId);
+                        } else if (data.type === 'result') {
+                            setImages(data.files || []);
+                            setStatus('✓ Done');
+                        } else if (data.type === 'error') {
+                            throw new Error(data.message);
+                        }
+                    }
+                }
+            }
         } catch (err) {
-            setStatus(`❌ ${err.message}`);
-            setImages([]);
+            if (err.message !== 'Cancelled') {
+                setStatus(`❌ ${err.message}`);
+                setImages([]);
+            }
         } finally {
             setLoading(false);
+            setEnhancing(false);
+            setCurrentTaskId(null);
+        }
+    };
+
+    const handleCancel = async () => {
+        if (!currentTaskId) return;
+
+        try {
+            setStatus('🛑 Cancelling...');
+            const resp = await fetch('/api/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ taskId: currentTaskId })
+            });
+
+            if (resp.ok) {
+                setStatus('🛑 Cancelled');
+                setImages([]);
+                setLoading(false);
+                setCurrentTaskId(null);
+            }
+        } catch (err) {
+            console.error('Cancel failed:', err);
         }
     };
 
@@ -206,6 +292,55 @@ export default function Home() {
                                     placeholder="What to avoid..."
                                     spellCheck={false}
                                 />
+                            </div>
+                        </div>
+
+                        {/* Enhance Toggle */}
+                        <div
+                            className="enhance-toggle"
+                            onClick={() => !loading && setEnhanceEnabled(!enhanceEnabled)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '12px 16px',
+                                background: enhanceEnabled ? 'rgba(139, 92, 246, 0.1)' : 'rgba(255,255,255,0.03)',
+                                border: `1px solid ${enhanceEnabled ? 'rgba(139, 92, 246, 0.4)' : 'rgba(255,255,255,0.1)'}`,
+                                borderRadius: '8px',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s',
+                                marginBottom: '12px',
+                                opacity: loading ? 0.6 : 1
+                            }}
+                        >
+                            <div style={{
+                                width: '44px',
+                                height: '24px',
+                                background: enhanceEnabled ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+                                borderRadius: '12px',
+                                position: 'relative',
+                                transition: 'all 0.2s',
+                                flexShrink: 0
+                            }}>
+                                <div style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    background: '#fff',
+                                    borderRadius: '50%',
+                                    position: 'absolute',
+                                    top: '2px',
+                                    left: enhanceEnabled ? '22px' : '2px',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                }} />
+                            </div>
+                            <div>
+                                <div style={{ fontWeight: 500, fontSize: '14px' }}>
+                                    ✨ AI Enhance Prompt
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                                    {enhancing ? 'Enhancing...' : enhanceEnabled ? 'AI will improve your prompt' : 'Use original prompt'}
+                                </div>
                             </div>
                         </div>
 
@@ -489,9 +624,30 @@ export default function Home() {
 
                         <div className="status-bar">
                             <span className="status">{status || '✨ Ready'}</span>
-                            <button className="primary" type="submit" disabled={loading}>
-                                {loading ? '⏳ Generating...' : '🚀 Generate'}
-                            </button>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                {loading && currentTaskId && (
+                                    <button
+                                        type="button"
+                                        className="cancel-btn"
+                                        onClick={handleCancel}
+                                        style={{
+                                            background: 'rgba(239, 68, 68, 0.2)',
+                                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                                            color: '#ef4444',
+                                            padding: '10px 20px',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontWeight: 500,
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        🛑 Cancel
+                                    </button>
+                                )}
+                                <button className="primary" type="submit" disabled={loading}>
+                                    {loading ? '⏳ Generating...' : '🚀 Generate'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>

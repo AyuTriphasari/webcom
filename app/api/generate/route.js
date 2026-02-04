@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
-import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -137,42 +136,67 @@ const saveToGallery = (urls, meta) => {
 };
 
 export async function POST(request) {
-    try {
-        const body = await request.json();
-        const opts = {
-            prompt: body.prompt?.toString() || 'A cinematic landscape at sunset, ultra-detailed',
-            negative: body.negative?.toString() || 'low quality, blurry, artifacts, watermark, text, logo, nsfw',
-            steps: Number(body.steps || 25),
-            cfg: Number(body.cfg || 4),
-            width: Number(body.width || 1024),
-            height: Number(body.height || 1024),
-            batch: Number(body.batch || 2),
-            seed: body.seed === 'random' || body.seed === undefined ? Math.floor(Math.random() * 1e12) : Number(body.seed),
-            model: body.model?.toString() || 'new_waiIllustriousSDXL_v160.safetensors'
-        };
+    const encoder = new TextEncoder();
 
-        const apiKey = loadToken();
-        const workflow = loadWorkflow(opts);
-        const taskId = await submitTask(apiKey, workflow);
-        const fileUrl = await pollTaskStatus(apiKey, taskId);
-        const imageUrls = await fetchImageUrls(fileUrl);
+    const stream = new ReadableStream({
+        async start(controller) {
+            const send = (data) => {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+            };
 
-        // Save metadata to gallery
-        saveToGallery(imageUrls, {
-            prompt: opts.prompt,
-            negative: opts.negative,
-            model: opts.model,
-            seed: opts.seed,
-            steps: opts.steps,
-            cfg: opts.cfg,
-            width: opts.width,
-            height: opts.height,
-            batch: opts.batch
-        });
+            try {
+                const body = await request.json();
+                const opts = {
+                    prompt: body.prompt?.toString() || 'A cinematic landscape at sunset, ultra-detailed',
+                    negative: body.negative?.toString() || 'low quality, blurry, artifacts, watermark, text, logo, nsfw',
+                    steps: Number(body.steps || 25),
+                    cfg: Number(body.cfg || 4),
+                    width: Number(body.width || 1024),
+                    height: Number(body.height || 1024),
+                    batch: Number(body.batch || 2),
+                    seed: body.seed === 'random' || body.seed === undefined ? Math.floor(Math.random() * 1e12) : Number(body.seed),
+                    model: body.model?.toString() || 'new_waiIllustriousSDXL_v160.safetensors'
+                };
 
-        return NextResponse.json({ files: imageUrls });
-    } catch (err) {
-        console.error('API error:', err.message);
-        return NextResponse.json({ message: err.message }, { status: 500 });
-    }
+                const apiKey = loadToken();
+                const workflow = loadWorkflow(opts);
+
+                // Submit task and send taskId immediately
+                const taskId = await submitTask(apiKey, workflow);
+                send({ type: 'taskId', taskId });
+
+                // Poll for results
+                const fileUrl = await pollTaskStatus(apiKey, taskId);
+                const imageUrls = await fetchImageUrls(fileUrl);
+
+                // Save metadata to gallery
+                saveToGallery(imageUrls, {
+                    prompt: opts.prompt,
+                    negative: opts.negative,
+                    model: opts.model,
+                    seed: opts.seed,
+                    steps: opts.steps,
+                    cfg: opts.cfg,
+                    width: opts.width,
+                    height: opts.height,
+                    batch: opts.batch
+                });
+
+                send({ type: 'result', files: imageUrls });
+            } catch (err) {
+                console.error('API error:', err.message);
+                send({ type: 'error', message: err.message });
+            } finally {
+                controller.close();
+            }
+        }
+    });
+
+    return new Response(stream, {
+        headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+        }
+    });
 }
