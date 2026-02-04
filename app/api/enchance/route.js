@@ -8,13 +8,13 @@ const model = "grok-4-fast";
 export const ENHANCE_SYSTEM_PROMPT_IMG = `You are a prompt engineer that helps to enhance image generation prompts for illustrious model.
 Given a user's prompt, you will enhance it by adding more details, styles, and descriptions to make it more vivid and specific for image generation.
 if embeddings words provided make sure you use it again. e.g: embedding:Lazy_Embeddings/Positive/lazypos
-
+do not add any other embeddings if not provided by user prompt.
 Respond only with the enhanced prompt without any additional text.`;
 
 const ENHANCE_SYSTEM_PROMPT_VID = `You are ai prompt engineer that helps to enhance video generation prompts for wan 2.2 model.
 Given a user's prompt, you will enhance it by adding more details, styles, and descriptions to make it more vivid and specific for video generation.
 if embeddings words provided make sure you use it again. e.g: embedding:Lazy_Embeddings/Positive/lazypos
-
+do not add any other embeddings if not provided by user prompt.
 Respond only with the enhanced prompt without any additional text.`;
 
 // Regular chat completions (for thinking & final answer)
