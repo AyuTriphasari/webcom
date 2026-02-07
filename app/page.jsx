@@ -715,7 +715,7 @@ export default function Home() {
                                         ) : (
                                             <>
                                                 <Image
-                                                    src={cfImage(src, { quality: 50 })}
+                                                    src={cfImage(src, { quality: 80 })}
                                                     alt={`Generated ${idx + 1}`}
                                                     fill
                                                     sizes="(max-width: 640px) 50vw, 33vw"
@@ -742,7 +742,7 @@ export default function Home() {
                         <div className="lightbox-inner">
                             <div onClick={(e) => e.stopPropagation()}>
                                 <Image
-                                    src={cfImage(images[activeIndex], { quality: 50 })}
+                                    src={cfImage(images[activeIndex], { quality: 80 })}
                                     alt="Full view"
                                     fill
                                     sizes="100vw"
