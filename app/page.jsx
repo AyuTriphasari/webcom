@@ -6,16 +6,16 @@ import Image from 'next/image';
 // imgproxy - convert to WebP
 const cfImage = (url, opts = {}) => {
     if (!url || url.startsWith('loading-')) return url;
-    const { quality = 80 } = opts;
+    const { quality = 50 } = opts;
     return `https://imgproxy.zlkpro.tech/insecure/q:${quality}/plain/${url}@webp`;
 };
 
 const defaults = {
-    prompt: 'embedding:Lazy_Embeddings/Positive/lazypos, embedding:Lazy_Embeddings/lazynsfw, embedding:Lazy_Embeddings/Positive/lazympos',
+    prompt: 'embedding:Lazy_Embeddings/Positive/lazypos,',
     negative: 'greyscale, black_white, simple_background, censored, logo, blur, kid, young woman, loli, embedding:Lazy_Embeddings/Negative/lazyneg, low quality, blurry, artifacts, watermark, text, logo',
-    steps: 25,
-    cfg: 4,
-    width: 1024,
+    steps: 10,
+    cfg: 3,
+    width: 768,
     height: 1024,
     batch: 2,
     seed: 'random',
@@ -40,9 +40,11 @@ export default function Home() {
     const [enhanceEnabled, setEnhanceEnabled] = useState(false);
     const [enhancing, setEnhancing] = useState(false);
     const [currentTaskId, setCurrentTaskId] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchTimeout, setSearchTimeout] = useState(null);
 
     // Fetch models from RunningHub API
-    const fetchModels = async (page = 1, append = false) => {
+    const fetchModels = async (page = 1, append = false, search = '') => {
         if (!append) setLoadingModels(true);
         else setLoadingMoreModels(true);
 
@@ -56,7 +58,7 @@ export default function Home() {
                     tags: null,
                     resourceType: "CHECKPOINT",
                     baseModels: ["IL-XL", "NoobAI-XL", "Pony-XL"],
-                    resourceName: "",
+                    resourceName: search,
                     systemResource: true,
                     choiceModel: true,
                     point: ""
@@ -464,157 +466,192 @@ export default function Home() {
 
                                     {showModelPicker && (
                                         <div style={{ marginTop: '12px' }}>
+                                            {/* Search Input */}
+                                            <div style={{ marginBottom: '12px' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="🔍 Search models..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        setSearchQuery(value);
+
+                                                        // Clear previous timeout
+                                                        if (searchTimeout) clearTimeout(searchTimeout);
+
+                                                        // Debounce search
+                                                        const timeout = setTimeout(() => {
+                                                            setCurrentPage(1);
+                                                            setModels([]);
+                                                            fetchModels(1, false, value);
+                                                        }, 500);
+                                                        setSearchTimeout(timeout);
+                                                    }}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '12px 16px',
+                                                        backgroundColor: '#1a1a1a',
+                                                        border: '1px solid #333',
+                                                        borderRadius: '8px',
+                                                        color: 'white',
+                                                        fontSize: '14px',
+                                                        outline: 'none',
+                                                        transition: 'border-color 0.2s'
+                                                    }}
+                                                    onFocus={(e) => e.currentTarget.style.borderColor = '#0070f3'}
+                                                    onBlur={(e) => e.currentTarget.style.borderColor = '#333'}
+                                                />
+                                            </div>
+
                                             {loadingModels ? (
                                                 <div style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
                                                     Loading models...
                                                 </div>
                                             ) : (
-                                                <>
-                                                    <div
-                                                        id="model-grid-container"
-                                                        style={{
-                                                            display: 'grid',
-                                                            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                                                            gap: '10px',
-                                                            maxHeight: '400px',
-                                                            overflowY: 'auto',
-                                                            padding: '8px',
-                                                            backgroundColor: '#0a0a0a',
-                                                            borderRadius: '8px',
-                                                            border: '1px solid #333',
-                                                        }}
-                                                        onScroll={(e) => {
-                                                            const container = e.currentTarget;
-                                                            const scrollTop = container.scrollTop;
-                                                            const scrollHeight = container.scrollHeight;
-                                                            const clientHeight = container.clientHeight;
+                                                <div
+                                                    id="model-grid-container"
+                                                    style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                                                        gap: '10px',
+                                                        maxHeight: '400px',
+                                                        overflowY: 'auto',
+                                                        padding: '8px',
+                                                        backgroundColor: '#0a0a0a',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #333',
+                                                    }}
+                                                    onScroll={(e) => {
+                                                        const container = e.currentTarget;
+                                                        const scrollTop = container.scrollTop;
+                                                        const scrollHeight = container.scrollHeight;
+                                                        const clientHeight = container.clientHeight;
 
-                                                            // Check if scrolled near bottom (within 100px)
-                                                            if (scrollHeight - scrollTop - clientHeight < 100 && hasMoreModels && !loadingMoreModels) {
-                                                                const nextPage = currentPage + 1;
-                                                                setCurrentPage(nextPage);
-                                                                fetchModels(nextPage, true);
-                                                            }
-                                                        }}
-                                                    >
-                                                        {models.map((model) => {
-                                                            const fullPath = model.versions?.[0]?.resourceStorageName || model.resourceName;
-                                                            const modelFile = fullPath.split('/').pop();
-                                                            const isSelected = form.model === modelFile;
-                                                            const thumbnailUrl = model.posterUrl;
+                                                        // Check if scrolled near bottom (within 100px)
+                                                        if (scrollHeight - scrollTop - clientHeight < 100 && hasMoreModels && !loadingMoreModels) {
+                                                            const nextPage = currentPage + 1;
+                                                            setCurrentPage(nextPage);
+                                                            fetchModels(nextPage, true, searchQuery);
+                                                        }
+                                                    }}
+                                                >
+                                                    {models.map((model) => {
+                                                        const fullPath = model.versions?.[0]?.resourceStorageName || model.resourceName;
+                                                        const modelFile = fullPath.split('/').pop();
+                                                        const isSelected = form.model === modelFile;
+                                                        const thumbnailUrl = model.posterUrl;
 
-                                                            return (
-                                                                <button
-                                                                    key={model.id}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setForm(f => ({ ...f, model: modelFile }));
-                                                                        setShowModelPicker(false);
-                                                                    }}
-                                                                    style={{
-                                                                        position: 'relative',
-                                                                        border: isSelected ? '3px solid #0070f3' : '2px solid #333',
-                                                                        borderRadius: '8px',
+                                                        return (
+                                                            <button
+                                                                key={model.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setForm(f => ({ ...f, model: modelFile }));
+                                                                    setShowModelPicker(false);
+                                                                }}
+                                                                style={{
+                                                                    position: 'relative',
+                                                                    border: isSelected ? '3px solid #0070f3' : '2px solid #333',
+                                                                    borderRadius: '8px',
+                                                                    overflow: 'hidden',
+                                                                    cursor: 'pointer',
+                                                                    backgroundColor: '#1a1a1a',
+                                                                    padding: 0,
+                                                                    transition: 'all 0.2s',
+                                                                    aspectRatio: '3/4',
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (!isSelected) e.currentTarget.style.borderColor = '#555';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    if (!isSelected) e.currentTarget.style.borderColor = '#333';
+                                                                }}
+                                                            >
+                                                                {thumbnailUrl && (
+                                                                    <Image
+                                                                        src={cfImage(thumbnailUrl, { quality: 30 })}
+                                                                        alt={model.resourceName}
+                                                                        fill
+                                                                        sizes="160px"
+                                                                        style={{ objectFit: 'cover' }}
+                                                                    />
+                                                                )}
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    top: 0,
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    padding: '4px 6px',
+                                                                    background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
+                                                                }}>
+                                                                    <div style={{
+                                                                        fontSize: '9px',
+                                                                        fontWeight: '600',
+                                                                        color: 'white',
+                                                                        backgroundColor: model.versions?.[0]?.baseModel === 'IL-XL' ? '#8b5cf6' : '#ec4899',
+                                                                        padding: '2px 4px',
+                                                                        borderRadius: '3px',
+                                                                        display: 'inline-block',
+                                                                    }}>
+                                                                        {model.versions?.[0]?.baseModel || 'N/A'}
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    bottom: 0,
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    padding: '6px',
+                                                                    background: 'linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%)',
+                                                                }}>
+                                                                    <div style={{
+                                                                        fontSize: '10px',
+                                                                        fontWeight: '500',
+                                                                        color: 'white',
                                                                         overflow: 'hidden',
-                                                                        cursor: 'pointer',
-                                                                        backgroundColor: '#1a1a1a',
-                                                                        padding: 0,
-                                                                        transition: 'all 0.2s',
-                                                                        aspectRatio: '3/4',
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        if (!isSelected) e.currentTarget.style.borderColor = '#555';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        if (!isSelected) e.currentTarget.style.borderColor = '#333';
-                                                                    }}
-                                                                >
-                                                                    {thumbnailUrl && (
-                                                                        <Image
-                                                                            src={cfImage(thumbnailUrl, { quality: 30 })}
-                                                                            alt={model.resourceName}
-                                                                            fill
-                                                                            sizes="160px"
-                                                                            style={{ objectFit: 'cover' }}
-                                                                        />
-                                                                    )}
+                                                                        textOverflow: 'ellipsis',
+                                                                        display: '-webkit-box',
+                                                                        WebkitLineClamp: 2,
+                                                                        WebkitBoxOrient: 'vertical',
+                                                                        lineHeight: '1.2',
+                                                                        textAlign: 'left',
+                                                                    }}>
+                                                                        {model.resourceName}
+                                                                    </div>
+                                                                </div>
+                                                                {isSelected && (
                                                                     <div style={{
                                                                         position: 'absolute',
-                                                                        top: 0,
-                                                                        left: 0,
-                                                                        right: 0,
-                                                                        padding: '4px 6px',
-                                                                        background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)',
+                                                                        top: '6px',
+                                                                        right: '6px',
+                                                                        width: '20px',
+                                                                        height: '20px',
+                                                                        borderRadius: '50%',
+                                                                        backgroundColor: '#0070f3',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        fontSize: '12px',
+                                                                        color: 'white',
+                                                                        fontWeight: 'bold',
                                                                     }}>
-                                                                        <div style={{
-                                                                            fontSize: '9px',
-                                                                            fontWeight: '600',
-                                                                            color: 'white',
-                                                                            backgroundColor: model.versions?.[0]?.baseModel === 'IL-XL' ? '#8b5cf6' : '#ec4899',
-                                                                            padding: '2px 4px',
-                                                                            borderRadius: '3px',
-                                                                            display: 'inline-block',
-                                                                        }}>
-                                                                            {model.versions?.[0]?.baseModel || 'N/A'}
-                                                                        </div>
+                                                                        ✓
                                                                     </div>
-                                                                    <div style={{
-                                                                        position: 'absolute',
-                                                                        bottom: 0,
-                                                                        left: 0,
-                                                                        right: 0,
-                                                                        padding: '6px',
-                                                                        background: 'linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%)',
-                                                                    }}>
-                                                                        <div style={{
-                                                                            fontSize: '10px',
-                                                                            fontWeight: '500',
-                                                                            color: 'white',
-                                                                            overflow: 'hidden',
-                                                                            textOverflow: 'ellipsis',
-                                                                            display: '-webkit-box',
-                                                                            WebkitLineClamp: 2,
-                                                                            WebkitBoxOrient: 'vertical',
-                                                                            lineHeight: '1.2',
-                                                                            textAlign: 'left',
-                                                                        }}>
-                                                                            {model.resourceName}
-                                                                        </div>
-                                                                    </div>
-                                                                    {isSelected && (
-                                                                        <div style={{
-                                                                            position: 'absolute',
-                                                                            top: '6px',
-                                                                            right: '6px',
-                                                                            width: '20px',
-                                                                            height: '20px',
-                                                                            borderRadius: '50%',
-                                                                            backgroundColor: '#0070f3',
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center',
-                                                                            fontSize: '12px',
-                                                                            color: 'white',
-                                                                            fontWeight: 'bold',
-                                                                        }}>
-                                                                            ✓
-                                                                        </div>
-                                                                    )}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                    {loadingMoreModels && (
-                                                        <div style={{ padding: '12px', textAlign: 'center', color: '#888', fontSize: '12px' }}>
-                                                            Loading more models...
-                                                        </div>
-                                                    )}
-                                                    {!hasMoreModels && models.length > 0 && (
-                                                        <div style={{ padding: '12px', textAlign: 'center', color: '#666', fontSize: '12px' }}>
-                                                            No more models to load
-                                                        </div>
-                                                    )}
-                                                </>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            {loadingMoreModels && (
+                                                <div style={{ padding: '12px', textAlign: 'center', color: '#888', fontSize: '12px' }}>
+                                                    Loading more models...
+                                                </div>
+                                            )}
+                                            {!hasMoreModels && models.length > 0 && (
+                                                <div style={{ padding: '12px', textAlign: 'center', color: '#666', fontSize: '12px' }}>
+                                                    No more models to load
+                                                </div>
                                             )}
                                         </div>
                                     )}
@@ -651,93 +688,97 @@ export default function Home() {
                         </div>
                     </div>
                 </form>
-            </div>
+            </div >
 
-            {images.length > 0 && (
-                <div className="card">
-                    <h2 className="section-title">
-                        {loading ? '⏳ Generating' : '🎨 Results'} ({images.length})
-                    </h2>
-                    <div className={getGalleryClass()}>
-                        {images.map((src, idx) => {
-                            const isLoading = typeof src === 'string' && src.startsWith('loading-');
-                            return (
+            {
+                images.length > 0 && (
+                    <div className="card">
+                        <h2 className="section-title">
+                            {loading ? '⏳ Generating' : '🎨 Results'} ({images.length})
+                        </h2>
+                        <div className={getGalleryClass()}>
+                            {images.map((src, idx) => {
+                                const isLoading = typeof src === 'string' && src.startsWith('loading-');
+                                return (
+                                    <button
+                                        key={idx}
+                                        className={`thumb ${isLoading ? 'thumb-loading' : ''}`}
+                                        type="button"
+                                        onClick={() => !isLoading && openLightbox(idx)}
+                                        disabled={isLoading}
+                                    >
+                                        {isLoading ? (
+                                            <div className="loading-placeholder">
+                                                <div className="spinner" />
+                                                <span className="loading-text">#{idx + 1}</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <Image
+                                                    src={cfImage(src, { quality: 50 })}
+                                                    alt={`Generated ${idx + 1}`}
+                                                    fill
+                                                    sizes="(max-width: 640px) 50vw, 33vw"
+                                                />
+                                                <span className="thumb-badge">#{idx + 1}</span>
+                                            </>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                activeIndex !== null && images[activeIndex] && (
+                    <div
+                        className="lightbox"
+                        onClick={closeLightbox}
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                    >
+                        <div className="lightbox-inner">
+                            <div onClick={(e) => e.stopPropagation()}>
+                                <Image
+                                    src={cfImage(images[activeIndex], { quality: 50 })}
+                                    alt="Full view"
+                                    fill
+                                    sizes="100vw"
+                                    priority
+                                />
+                            </div>
+                            <button className="lightbox-close" onClick={closeLightbox}>
+                                ×
+                            </button>
+
+                            {/* Navigation arrows */}
+                            {activeIndex > 0 && (
                                 <button
-                                    key={idx}
-                                    className={`thumb ${isLoading ? 'thumb-loading' : ''}`}
-                                    type="button"
-                                    onClick={() => !isLoading && openLightbox(idx)}
-                                    disabled={isLoading}
+                                    className="lightbox-nav lightbox-prev"
+                                    onClick={(e) => { e.stopPropagation(); goPrev(); }}
                                 >
-                                    {isLoading ? (
-                                        <div className="loading-placeholder">
-                                            <div className="spinner" />
-                                            <span className="loading-text">#{idx + 1}</span>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <Image
-                                                src={cfImage(src, { quality: 80 })}
-                                                alt={`Generated ${idx + 1}`}
-                                                fill
-                                                sizes="(max-width: 640px) 50vw, 33vw"
-                                            />
-                                            <span className="thumb-badge">#{idx + 1}</span>
-                                        </>
-                                    )}
+                                    ‹
                                 </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+                            )}
+                            {activeIndex < images.length - 1 && (
+                                <button
+                                    className="lightbox-nav lightbox-next"
+                                    onClick={(e) => { e.stopPropagation(); goNext(); }}
+                                >
+                                    ›
+                                </button>
+                            )}
 
-            {activeIndex !== null && images[activeIndex] && (
-                <div
-                    className="lightbox"
-                    onClick={closeLightbox}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    <div className="lightbox-inner">
-                        <div onClick={(e) => e.stopPropagation()}>
-                            <Image
-                                src={cfImage(images[activeIndex], { quality: 80 })}
-                                alt="Full view"
-                                fill
-                                sizes="100vw"
-                                priority
-                            />
-                        </div>
-                        <button className="lightbox-close" onClick={closeLightbox}>
-                            ×
-                        </button>
-
-                        {/* Navigation arrows */}
-                        {activeIndex > 0 && (
-                            <button
-                                className="lightbox-nav lightbox-prev"
-                                onClick={(e) => { e.stopPropagation(); goPrev(); }}
-                            >
-                                ‹
-                            </button>
-                        )}
-                        {activeIndex < images.length - 1 && (
-                            <button
-                                className="lightbox-nav lightbox-next"
-                                onClick={(e) => { e.stopPropagation(); goNext(); }}
-                            >
-                                ›
-                            </button>
-                        )}
-
-                        {/* Counter */}
-                        <div className="lightbox-counter">
-                            {activeIndex + 1} / {images.length}
+                            {/* Counter */}
+                            <div className="lightbox-counter">
+                                {activeIndex + 1} / {images.length}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Credits Notice */}
             <div style={{
@@ -768,6 +809,6 @@ export default function Home() {
                     RunningHub
                 </a>
             </footer>
-        </main>
+        </main >
     );
 }
