@@ -107,6 +107,10 @@ export default function VideoPage() {
                         if (data.type === 'taskId') {
                             setCurrentTaskId(data.taskId);
                             console.log('Task ID:', data.taskId);
+                        } else if (data.type === 'heartbeat') {
+                            const pct = Math.round((data.attempt / data.maxAttempts) * 100);
+                            setProgress(pct);
+                            setStatus(`⏳ Generating video... (${data.attempt}/${data.maxAttempts})`);
                         } else if (data.type === 'result') {
                             setVideoUrl(data.videoUrl || '');
                             setStatus(`✓ Done! (seed: ${data.seed})`);

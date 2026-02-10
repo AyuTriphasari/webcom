@@ -213,6 +213,8 @@ export default function Home() {
                         if (data.type === 'taskId') {
                             setCurrentTaskId(data.taskId);
                             console.log('Task ID:', data.taskId);
+                        } else if (data.type === 'heartbeat') {
+                            setStatus(`⏳ Generating... (${data.attempt}/${data.maxAttempts})`);
                         } else if (data.type === 'result') {
                             setImages(data.files || []);
                             setStatus('✓ Done');

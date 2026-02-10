@@ -4,6 +4,7 @@ import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const maxDuration = 600; // 10 minutes max for video generation
 
 const CONFIG = {
     API_URL: 'https://www.runninghub.ai/task/create',
@@ -89,11 +90,16 @@ const submitTask = async (apiKey, payload) => {
     return taskId;
 };
 
-const pollTaskStatus = async (apiKey, taskId) => {
+const pollTaskStatus = async (apiKey, taskId, onProgress) => {
     let attempt = 0;
     while (attempt < CONFIG.MAX_POLL_ATTEMPTS) {
         attempt++;
         await sleep(CONFIG.POLL_INTERVAL);
+
+        // Send heartbeat to keep SSE connection alive
+        if (onProgress) {
+            onProgress({ type: 'heartbeat', attempt, maxAttempts: CONFIG.MAX_POLL_ATTEMPTS });
+        }
 
         try {
             const resp = await axios.post(
@@ -217,8 +223,8 @@ export async function POST(request) {
                 const taskId = await submitTask(apiKey, workflow);
                 send({ type: 'taskId', taskId });
 
-                // Poll for results
-                const fileUrl = await pollTaskStatus(apiKey, taskId);
+                // Poll for results (send heartbeat to keep connection alive)
+                const fileUrl = await pollTaskStatus(apiKey, taskId, send);
                 const videoUrl = await fetchVideoUrl(fileUrl);
 
                 // Save to gallery

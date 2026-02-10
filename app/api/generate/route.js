@@ -4,6 +4,7 @@ import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const maxDuration = 300; // 5 minutes max for image generation
 
 const CONFIG = {
     API_URL: 'https://www.runninghub.ai/task/create',
@@ -64,30 +65,41 @@ const submitTask = async (apiKey, payload) => {
     return taskId;
 };
 
-const pollTaskStatus = async (apiKey, taskId) => {
+const pollTaskStatus = async (apiKey, taskId, onProgress) => {
     let attempt = 0;
-    while (true) {
+    const maxAttempts = 60; // ~5 minutes max
+    while (attempt < maxAttempts) {
         attempt++;
-        const resp = await axios.post(
-            CONFIG.HISTORY_URL,
-            { size: 20, current: 1, taskType: ['WORKFLOW', 'WEBAPP'], fromId: '' },
-            { headers: createHeaders(apiKey) }
-        );
-        if (resp.status !== 200) throw new Error(`HTTP ${resp.status}`);
-        const taskData = resp.data.data?.[0];
-        if (!taskData) {
-            await sleep(CONFIG.POLL_INTERVAL);
-            continue;
-        }
-        const { taskStatus, taskId: currentTaskId, fileUrl } = taskData;
-        if (currentTaskId !== taskId) {
-            await sleep(CONFIG.POLL_INTERVAL);
-            continue;
-        }
-        if (taskStatus === 'SUCCESS') return fileUrl;
-        if (taskStatus === 'FAILED') throw new Error('Task failed');
         await sleep(CONFIG.POLL_INTERVAL);
+
+        // Send heartbeat to keep SSE connection alive
+        if (onProgress) {
+            onProgress({ type: 'heartbeat', attempt, maxAttempts });
+        }
+
+        try {
+            const resp = await axios.post(
+                CONFIG.HISTORY_URL,
+                { size: 20, current: 1, taskType: ['WORKFLOW', 'WEBAPP'], fromId: '' },
+                { headers: createHeaders(apiKey) }
+            );
+            if (resp.status !== 200) throw new Error(`HTTP ${resp.status}`);
+            const taskData = resp.data.data?.[0];
+            if (!taskData) {
+                continue;
+            }
+            const { taskStatus, taskId: currentTaskId, fileUrl } = taskData;
+            if (currentTaskId !== taskId) {
+                continue;
+            }
+            if (taskStatus === 'SUCCESS') return fileUrl;
+            if (taskStatus === 'FAILED') throw new Error('Task failed');
+        } catch (err) {
+            if (err.message === 'Task failed') throw err;
+            console.log('Poll error:', err.message);
+        }
     }
+    throw new Error('Generation timeout');
 };
 
 const fetchImageUrls = async (fileUrl) => {
@@ -165,8 +177,8 @@ export async function POST(request) {
                 const taskId = await submitTask(apiKey, workflow);
                 send({ type: 'taskId', taskId });
 
-                // Poll for results
-                const fileUrl = await pollTaskStatus(apiKey, taskId);
+                // Poll for results (send heartbeat to keep connection alive)
+                const fileUrl = await pollTaskStatus(apiKey, taskId, send);
                 const imageUrls = await fetchImageUrls(fileUrl);
 
                 // Save metadata to gallery
